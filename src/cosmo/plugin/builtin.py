@@ -4,32 +4,7 @@ from typing import override
 
 from cosmo.engine.core import ConditionEngine
 from cosmo.engine.model import EngineCondition
-
-
-class AbstractCondition(EngineCondition):
-    def __init__(self):
-        super().__init__()
-
-    def __bool__(self) -> bool:
-        raise NotImplementedError("Use utils.check(<condition>) to evaluate conditions")
-
-    @property
-    @override
-    def timeout(self) -> timedelta | None:
-        return getattr(self, "_timeout", None)
-
-    @timeout.setter
-    def timeout(self, value: timedelta):
-        self._timeout = value
-
-    @property
-    @override
-    def duration(self) -> timedelta | None:
-        return getattr(self, "_duration", None)
-
-    @duration.setter
-    def duration(self, value: timedelta):
-        self._duration = value
+from cosmo.plugin.model import AbstractCondition
 
 
 class BooleanCondition(AbstractCondition):
@@ -119,7 +94,7 @@ class AlwaysTrueCondition(AbstractCondition):
         return True
 
 
-class RuleUtilities:
+class CosmoUtils:
     """Utilities for work with rules."""
 
     def __init__(self, engine: ConditionEngine):
