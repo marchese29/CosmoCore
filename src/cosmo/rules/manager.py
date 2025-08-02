@@ -28,19 +28,25 @@ class RuleManager:
 
         self._tasks: dict[str, aio.Task[None]]
 
-    def install_trigger_rule(self, rule: TriggerRule) -> aio.Task[None]:
+    def install_trigger_rule(
+        self, rule: TriggerRule, task_id: str | None = None
+    ) -> aio.Task[None]:
         task = aio.create_task(
             self._run_triggered_rule(rule.trigger_provider, rule.routine)
         )
-        task_id = str(uuid.uuid4())
+        if task_id is None:
+            task_id = str(uuid.uuid4())
         task.set_name(task_id)
         self._tasks[task_id] = task
         task.add_done_callback(self._on_task_complete())
         return task
 
-    def install_timed_rule(self, rule: TimerRule) -> aio.Task[None]:
+    def install_timed_rule(
+        self, rule: TimerRule, task_id: str | None = None
+    ) -> aio.Task[None]:
         task = aio.create_task(self._run_timed_rule(rule.time_provider, rule.routine))
-        task_id = str(uuid.uuid4())
+        if task_id is None:
+            task_id = str(uuid.uuid4())
         task.set_name(task_id)
         self._tasks[task_id] = task
         task.add_done_callback(self._on_task_complete())
