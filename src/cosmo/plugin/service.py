@@ -40,6 +40,10 @@ class PluginService:
             return cast(T, self._utils[util_type])
         return None
 
+    def get_registered_utility_types(self) -> list[type]:
+        """Returns a list of all registered utility types."""
+        return list(self._utils.keys())
+
     async def _run_plugin(self, plugin: CosmoPlugin):
         event_generator: AsyncGenerator = plugin.run()  # type: ignore
         async for impacted_conditions in event_generator:
