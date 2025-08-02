@@ -1,6 +1,6 @@
 import asyncio as aio
 import uuid
-from collections.abc import Callable
+from collections.abc import AsyncGenerator, Callable
 from types import NoneType
 from typing import cast
 
@@ -41,7 +41,7 @@ class PluginService:
         return None
 
     async def _run_plugin(self, plugin: CosmoPlugin):
-        event_generator = await plugin.run()
+        event_generator: AsyncGenerator = plugin.run()  # type: ignore
         async for impacted_conditions in event_generator:
             self._engine.report_condition_event(impacted_conditions)
 
