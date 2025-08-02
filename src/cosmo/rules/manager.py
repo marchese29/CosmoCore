@@ -26,7 +26,7 @@ class RuleManager:
         self._engine = engine
         self._plugins = plugin_service
 
-        self._tasks: dict[str, aio.Task[None]]
+        self._tasks: dict[str, aio.Task[None]] = {}
 
     def install_trigger_rule(
         self, rule: TriggerRule, task_id: str | None = None
@@ -65,6 +65,14 @@ class RuleManager:
 
         # Rule was removed
         return True
+
+    def get_all_rules(self) -> list[str]:
+        """Get a list of all currently installed and running rule IDs.
+
+        Returns:
+            A list of rule IDs for all currently active rules
+        """
+        return list(self._tasks.keys())
 
     async def run_action_once(self, action: RuleRoutine) -> None:
         """Execute a rule action once immediately without creating a persistent task.
