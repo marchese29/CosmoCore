@@ -1,5 +1,6 @@
 import asyncio as aio
 import inspect
+import logging
 import uuid
 from collections.abc import Callable
 from datetime import datetime
@@ -18,6 +19,8 @@ from cosmo.rules.model import (
     TriggerRule,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class RuleManager:
     """Manager for the running rules in Cosmo's core."""
@@ -27,6 +30,7 @@ class RuleManager:
         self._plugins = plugin_service
 
         self._tasks: dict[str, aio.Task[None]] = {}
+        self._suspended_rules: set[str] = set()
 
     def install_trigger_rule(
         self, rule: TriggerRule, task_id: str | None = None
@@ -74,6 +78,49 @@ class RuleManager:
         """
         return list(self._tasks.keys())
 
+    def suspend_rule(self, rule_id: str) -> bool:
+        """Suspend a rule from executing its actions.
+
+        Args:
+            rule_id: The ID of the rule to suspend
+
+        Returns:
+            True if the rule was suspended, False if the rule doesn't exist
+        """
+        if rule_id not in self._tasks:
+            return False
+
+        self._suspended_rules.add(rule_id)
+        return True
+
+    def resume_rule(self, rule_id: str) -> bool:
+        """Resume a suspended rule.
+
+        Args:
+            rule_id: The ID of the rule to resume
+
+        Returns:
+            True if the rule was resumed, False if the rule doesn't exist or
+            wasn't suspended
+        """
+        if rule_id not in self._tasks:
+            return False
+
+        was_suspended = rule_id in self._suspended_rules
+        self._suspended_rules.discard(rule_id)
+        return was_suspended
+
+    def is_rule_suspended(self, rule_id: str) -> bool:
+        """Check if a rule is currently suspended.
+
+        Args:
+            rule_id: The ID of the rule to check
+
+        Returns:
+            True if the rule exists and is suspended, False otherwise
+        """
+        return rule_id in self._suspended_rules
+
     async def run_action_once(self, action: RuleRoutine) -> None:
         """Execute a rule action once immediately without creating a persistent task.
 
@@ -92,7 +139,10 @@ class RuleManager:
     def _on_task_complete(self) -> Callable[[aio.Task[None]], None]:
         def inner(task: aio.Task[None]):
             # TODO: Handle task exception exits
-            del self._tasks[task.get_name()]
+            task_name = task.get_name()
+            del self._tasks[task_name]
+            # Clean up suspended rules set
+            self._suspended_rules.discard(task_name)
 
         return inner
 
@@ -157,6 +207,18 @@ class RuleManager:
             # Remove the trigger while running the action
             self._engine.remove_condition(trigger)
 
+            # Get the current task name (rule ID)
+            current_task = aio.current_task()
+            rule_id = current_task.get_name() if current_task else "unknown"
+
+            # Check if rule is suspended before executing action
+            if rule_id in self._suspended_rules:
+                logger.info(
+                    f"Rule {rule_id} triggered but is suspended, "
+                    "skipping action execution"
+                )
+                continue
+
             # Run the rule's action
             action_args = self._resolve_utilities(action)
             await action(*action_args)
@@ -180,6 +242,18 @@ class RuleManager:
 
             # Wait for trigger to fire
             await aio.sleep((next_trigger - datetime.now()).total_seconds())
+
+            # Get the current task name (rule ID)
+            current_task = aio.current_task()
+            rule_id = current_task.get_name() if current_task else "unknown"
+
+            # Check if rule is suspended before executing action
+            if rule_id in self._suspended_rules:
+                logger.info(
+                    f"Timed rule {rule_id} triggered but is suspended, "
+                    "skipping action execution"
+                )
+                continue
 
             # Run the action
             action_args = self._resolve_utilities(action)
