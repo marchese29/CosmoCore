@@ -66,6 +66,21 @@ class RuleManager:
         # Rule was removed
         return True
 
+    async def run_action_once(self, action: RuleRoutine) -> None:
+        """Execute a rule action once immediately without creating a persistent task.
+
+        Args:
+            action: The rule routine to execute
+
+        Raises:
+            ValueError: If the action has invalid parameters or utility dependencies
+        """
+        # Resolve utilities for the action
+        action_args = self._resolve_utilities(action)
+
+        # Execute the action immediately
+        await action(*action_args)
+
     def _on_task_complete(self) -> Callable[[aio.Task[None]], None]:
         def inner(task: aio.Task[None]):
             # TODO: Handle task exception exits
