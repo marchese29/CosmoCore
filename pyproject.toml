@@ -7,7 +7,9 @@ authors = [
     { name = "Dan Marchese", email = "dan@marchese.me" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "fastapi[standard]>=0.116.1",
+]
 
 [build-system]
 requires = ["hatchling"]
