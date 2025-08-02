@@ -119,6 +119,10 @@ class ConditionEngine:
             task.cancel()
             del self._duration_timers[condition.instance_id]
 
+        # Let the condition know it was removed
+        condition.removed()
+
+        # Remove any sub-conditions
         for subcondition in condition.subconditions:
             self.remove_condition(subcondition)
 

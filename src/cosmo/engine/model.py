@@ -40,6 +40,10 @@ class EngineCondition(ABC):
         """Called to initialize the condition by giving it all subcondition states."""
         return
 
+    def removed(self):
+        """Called when the condition is removed from engine tracking"""
+        return
+
     def on_condition_event(self, condition: "EngineCondition", state: bool):
         """Invoked when a subcondition changes.  Your logic must be order invariant"""
         return
