@@ -8,7 +8,7 @@ from inspect import Parameter, isclass
 from typing import get_type_hints
 
 from cosmo.engine.core import ConditionEngine
-from cosmo.plugin.builtin import RuleUtils
+from cosmo.plugin.builtin import LunarUtils, RuleUtils, SolarUtils
 from cosmo.plugin.model import AbstractCondition
 from cosmo.plugin.service import PluginService
 from cosmo.rules.model import (
@@ -172,9 +172,13 @@ class RuleManager:
                 raise ValueError(f"Utility type {type_hint.__name__} is already declared")
             seen_types.add(type_hint)
 
-            # Resolve the utility from the plugin (or the builtin CosmoUtils)
+            # Resolve the utility from the plugin (or the builtin utilities)
             if type_hint == RuleUtils:
                 result.append(RuleUtils(self._engine))
+            elif type_hint == SolarUtils:
+                result.append(SolarUtils())
+            elif type_hint == LunarUtils:
+                result.append(LunarUtils())
             else:
                 utility = self._plugins.util_for_type(type_hint)
                 if utility is None:
@@ -224,24 +228,35 @@ class RuleManager:
             await action(*action_args)
 
     async def _run_timed_rule(self, time_provider: RuleTimeProvider, action: RuleRoutine):
+        def get_current_time_with_tz(trigger: datetime) -> datetime:
+            if trigger.tzinfo is not None:
+                # Trigger is timezone-aware, get current time in that timezone
+                return datetime.now(tz=trigger.tzinfo)
+            else:
+                # Trigger is naive, return naive current time
+                return datetime.now()
+
         while (next_trigger := time_provider()) is not None:
             if not isinstance(next_trigger, datetime):
                 raise ValueError("Time trigger must be a datetime instance")
 
             # You get a few tries to give me a valid trigger
             i = 0
-            while next_trigger is not None and next_trigger <= datetime.now() and i < 2:
+            current_time = get_current_time_with_tz(next_trigger)
+            while next_trigger is not None and next_trigger <= current_time and i < 2:
                 i += 1
                 next_trigger = time_provider()
                 if not isinstance(next_trigger, datetime):
                     raise ValueError("Time trigger must be a datetime instance")
+                current_time = get_current_time_with_tz(next_trigger)
 
-            if next_trigger is None or next_trigger <= datetime.now():
+            current_time = get_current_time_with_tz(next_trigger)
+            if next_trigger is None or next_trigger <= current_time:
                 # If still no valid trigger, it's time to exit
                 return
 
             # Wait for trigger to fire
-            await aio.sleep((next_trigger - datetime.now()).total_seconds())
+            await aio.sleep((next_trigger - current_time).total_seconds())
 
             # Get the current task name (rule ID)
             current_task = aio.current_task()
