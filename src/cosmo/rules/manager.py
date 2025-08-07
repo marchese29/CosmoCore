@@ -8,7 +8,7 @@ from inspect import Parameter, isclass
 from typing import get_type_hints
 
 from cosmo.engine.core import ConditionEngine
-from cosmo.plugin.builtin import CosmoUtils
+from cosmo.plugin.builtin import RuleUtils
 from cosmo.plugin.model import AbstractCondition
 from cosmo.plugin.service import PluginService
 from cosmo.rules.model import (
@@ -173,8 +173,8 @@ class RuleManager:
             seen_types.add(type_hint)
 
             # Resolve the utility from the plugin (or the builtin CosmoUtils)
-            if type_hint == CosmoUtils:
-                result.append(CosmoUtils(self._engine))
+            if type_hint == RuleUtils:
+                result.append(RuleUtils(self._engine))
             else:
                 utility = self._plugins.util_for_type(type_hint)
                 if utility is None:

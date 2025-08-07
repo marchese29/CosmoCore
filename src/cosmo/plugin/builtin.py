@@ -94,7 +94,7 @@ class AlwaysTrueCondition(AbstractCondition):
         return True
 
 
-class CosmoUtils:
+class RuleUtils:
     """Utilities for work with rules."""
 
     def __init__(self, engine: ConditionEngine):
